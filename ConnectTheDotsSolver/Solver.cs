@@ -1,10 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
-
-namespace ConnectTheDotsSolver
+﻿namespace ConnectTheDotsSolver
 {
     public struct Pos
     {
@@ -175,7 +169,7 @@ namespace ConnectTheDotsSolver
         public Size size;
         public Fill MandatoryFill;
     }
-    internal class Solver(PictureBox pictureBox)
+    public class Solver(PictureBox pictureBox)
     {
         private Bitmap gameBoardBitmap;
         private PictureBox pictureBox = pictureBox;
@@ -299,8 +293,11 @@ namespace ConnectTheDotsSolver
                     Console.WriteLine("Found solution !");
 
                     gameBoardBitmap = Logger.DrawSolution(gameBoard);
-                    pictureBox.Image = gameBoardBitmap;
                     gameBoardBitmap.Save("boardSolved.png");
+                    if (pictureBox != null)
+                    {
+                        pictureBox.Image = gameBoardBitmap;
+                    }
                     return true;
                 }
                 else
@@ -309,7 +306,7 @@ namespace ConnectTheDotsSolver
                     return false;
                 }
             }
-            
+
         }
         static bool checkBranch(Gameboard gameboard, int branchID, Dictionary<int, int[]>[] values, int check)
         {
@@ -498,7 +495,7 @@ namespace ConnectTheDotsSolver
                     currentLine.MandatoryEnd.Add(PossibleWays.First());
                 }
             }
-            
+
             return foundPath;
         }
         static void DFS(Gameboard gameBoard, Pos currentPos, Pos targetPos, Line currentLine)
@@ -628,9 +625,9 @@ namespace ConnectTheDotsSolver
                     continue;
                 if (currentLine.MandatoryStart.Contains(nextPos))
                     continue;
-                if (currentLine.StartPos.Equals(nextPos)) 
+                if (currentLine.StartPos.Equals(nextPos))
                     continue;
-                if (currentLine.EndPos.Equals(nextPos)) 
+                if (currentLine.EndPos.Equals(nextPos))
                     continue;
                 if (PosOnColorDot(gameBoard, nextPos, null, true))
                     continue;

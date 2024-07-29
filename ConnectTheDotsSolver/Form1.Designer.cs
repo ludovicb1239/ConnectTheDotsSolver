@@ -33,7 +33,7 @@
             // 
             // SolveButton
             // 
-            SolveButton.Location = new Point(315, 171);
+            SolveButton.Location = new Point(255, 269);
             SolveButton.Name = "SolveButton";
             SolveButton.Size = new Size(75, 23);
             SolveButton.TabIndex = 0;
@@ -45,7 +45,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(584, 561);
             Controls.Add(SolveButton);
             Name = "Form1";
             Text = "Form1";

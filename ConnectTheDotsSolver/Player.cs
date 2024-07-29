@@ -20,7 +20,7 @@ namespace ConnectTheDotsSolver
 
             sim = new();
 
-            int delayms = 50;
+            int delayms = 35;
             foreach (var line in board.Lines)
             {
 

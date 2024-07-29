@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ConnectTheDotsSolver
+﻿namespace ConnectTheDotsSolver
 {
     internal class Logger
     {
@@ -17,10 +11,10 @@ namespace ConnectTheDotsSolver
             Bitmap bitmap = new Bitmap(width, height);
             using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.Clear(Color.White);
+                g.Clear(Color.Black);
 
                 // Draw grid lines
-                Pen pen = new Pen(Color.Black, 1);
+                Pen pen = new Pen(Color.Gray, 1);
                 for (int x = 0; x <= gameBoard.size.Width; x++)
                 {
                     g.DrawLine(pen, x * cellSize, 0, x * cellSize, height);

@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace ConnectTheDotsSolver
 {
@@ -13,7 +12,7 @@ namespace ConnectTheDotsSolver
         public Gameboard ScanGameboard()
         {
             Gameboard gameBoard = new();
-            gameBoard.size = new Size(sizeX,sizeY);
+            gameBoard.size = new Size(sizeX, sizeY);
             int width = (int)(bottomRightCorner.X - topLeftCorner.X);
             int height = (int)(bottomRightCorner.Y - topLeftCorner.Y);
 
