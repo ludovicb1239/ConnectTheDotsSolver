@@ -1,4 +1,7 @@
-﻿namespace ConnectTheDotsSolver
+﻿using System.Numerics;
+using System.Threading;
+
+namespace ConnectTheDotsSolver
 {
     public struct Pos
     {
@@ -147,8 +150,8 @@
         public Pos StartPos;
         public Pos EndPos;
         public Color Color;
-        public List<HashSet<Pos>> PossibleTrajectories;
-        public HashSet<Pos> CurrentTrajectory;
+        public List<List<Pos>> PossibleTrajectories;
+        public List<Pos> CurrentTrajectory;
         public Fill CurrentFill;
         public List<Pos> MandatoryStart;
         public List<Pos> MandatoryEnd;
@@ -162,18 +165,46 @@
             MandatoryStart = new();
             MandatoryEnd = new();
         }
+        public Line(Line otherLine)
+        {
+            this.EndPos = otherLine.EndPos;
+            this.StartPos = otherLine.StartPos;
+            this.Color = otherLine.Color;
+            PossibleTrajectories = new();
+            CurrentTrajectory = new();
+            MandatoryStart =  new(otherLine.MandatoryStart);
+            MandatoryEnd = new(otherLine.MandatoryEnd);
+            this.CurrentFill = otherLine.CurrentFill;
+        }
     }
     public class Gameboard
     {
         public List<Line> Lines;
         public Size size;
         public Fill MandatoryFill;
+        public Gameboard(Gameboard gameboard)
+        {
+            this.Lines = new();
+            foreach(Line line in gameboard.Lines)
+            {
+                this.Lines.Add(new(line));
+            }
+            this.size = gameboard.size;
+            this.MandatoryFill = gameboard.MandatoryFill;
+        }
+        public Gameboard()
+        {
+            this.Lines = new();
+        }
     }
     public class Solver(PictureBox pictureBox)
     {
         private Bitmap gameBoardBitmap;
         private PictureBox pictureBox = pictureBox;
 
+        // Move in all possible directions (up, right, down, left)
+        private static readonly short[] dx = { 0, 1, 0, -1 };
+        private static readonly short[] dy = { 1, 0, -1, 0 };
         public bool SolveGameBoard(Gameboard gameBoard)
         {
 
@@ -212,37 +243,50 @@
             gameBoardBitmap.Save($"firstpass.png");
             //Console.WriteLine(gameBoard.MandatoryFill.ToString());
 
-
-            // Start DFS from each valid start position
-            foreach (var line in gameBoard.Lines)
+            List<Thread> threads = new();
+            for(int i = 0; i < gameBoard.Lines.Count; i++)
             {
-                Pos start = line.MandatoryStart.Count != 0 ? line.MandatoryStart.Last() : line.StartPos;
-                Pos end = line.MandatoryEnd.Count != 0 ? line.MandatoryEnd.Last() : line.EndPos;
-                DFS(gameBoard, start, end, line);
-                foreach (var line1 in gameBoard.Lines)
-                {
-                    line1.CurrentTrajectory = new();
-                }
+                Gameboard gameboardDupe = new Gameboard(gameBoard);
+                int lineID = i;
 
-                Console.WriteLine($"Found {line.PossibleTrajectories.Count} paths for color {line.Color.Name}");
+                Thread thread = new Thread(new ThreadStart(() => {
+                    Line line = gameboardDupe.Lines[lineID];
+                    Pos start = line.MandatoryStart.Count != 0 ? line.MandatoryStart.Last() : line.StartPos;
+                    Pos end = line.MandatoryEnd.Count != 0 ? line.MandatoryEnd.Last() : line.EndPos;
+                    DFS(gameboardDupe, start, end, line);
+                    gameBoard.Lines[lineID] = line;
+                    Console.WriteLine($"Found {line.PossibleTrajectories.Count} paths for color {line.Color.Name}");
 
-                if (line.PossibleTrajectories.Count < 100)
-                {
-                    if (!Directory.Exists(line.Color.Name))
+                    foreach(Line l in  gameboardDupe.Lines)
                     {
-                        Directory.CreateDirectory(line.Color.Name);
+                        l.CurrentTrajectory = new();
                     }
-                    int i = 0;
-                    foreach (var traj in line.PossibleTrajectories)
+                    if (line.PossibleTrajectories.Count < 100)
                     {
-                        line.CurrentTrajectory = traj;
-                        gameBoardBitmap = Logger.DrawSolution(gameBoard);
-                        gameBoardBitmap.Save($"{line.Color.Name}/solution{i}.png");
-                        i++;
+                        if (!Directory.Exists(line.Color.Name))
+                        {
+                            Directory.CreateDirectory(line.Color.Name);
+                        }
+                        int n = 0;
+                        foreach (var traj in line.PossibleTrajectories)
+                        {
+                            line.CurrentTrajectory = traj;
+                            Bitmap bitmap = Logger.DrawSolution(gameboardDupe);
+                            bitmap.Save($"{line.Color.Name}/solution{n}.png");
+                            n++;
+                        }
                     }
-                }
+                }));
 
+                thread.Name = "Color_" + lineID;
+                thread.Start();
+                threads.Add(thread);
+            }
 
+            // Wait for all threads to complete
+            foreach (Thread thread in threads)
+            {
+                thread.Join();
             }
 
             {
@@ -348,8 +392,6 @@
             bool foundPath = false;
 
             HashSet<Pos> PossibleWays = new();
-            short[] dx1 = { 0, 1, 0, -1 };
-            short[] dy1 = { -1, 0, 1, 0 };
             bool backToItself;
 
             if (currentLine.MandatoryStart.Count == 0)
@@ -359,8 +401,8 @@
                 backToItself = false;
                 for (int n = 0; n < 4; n++)
                 {
-                    short nextX = (short)(currentLine.StartPos.x + dx1[n]);
-                    short nextY = (short)(currentLine.StartPos.y + dy1[n]);
+                    short nextX = (short)(currentLine.StartPos.x + dx[n]);
+                    short nextY = (short)(currentLine.StartPos.y + dy[n]);
                     Pos nextPos = new(nextX, nextY);
 
                     // Check if the next position is within the bounds of the game board
@@ -395,8 +437,8 @@
                 backToItself = false;
                 for (int n = 0; n < 4; n++)
                 {
-                    short nextX = (short)(currentLine.MandatoryStart.Last().x + dx1[n]);
-                    short nextY = (short)(currentLine.MandatoryStart.Last().y + dy1[n]);
+                    short nextX = (short)(currentLine.MandatoryStart.Last().x + dx[n]);
+                    short nextY = (short)(currentLine.MandatoryStart.Last().y + dy[n]);
                     Pos nextPos = new(nextX, nextY);
 
                     // Check if the next position is within the bounds of the game board
@@ -431,8 +473,8 @@
                 backToItself = false;
                 for (int n = 0; n < 4; n++)
                 {
-                    short nextX = (short)(currentLine.EndPos.x + dx1[n]);
-                    short nextY = (short)(currentLine.EndPos.y + dy1[n]);
+                    short nextX = (short)(currentLine.EndPos.x + dx[n]);
+                    short nextY = (short)(currentLine.EndPos.y + dy[n]);
                     Pos nextPos = new(nextX, nextY);
 
                     // Check if the next position is within the bounds of the game board
@@ -466,8 +508,8 @@
                 backToItself = false;
                 for (int n = 0; n < 4; n++)
                 {
-                    short nextX = (short)(currentLine.MandatoryEnd.Last().x + dx1[n]);
-                    short nextY = (short)(currentLine.MandatoryEnd.Last().y + dy1[n]);
+                    short nextX = (short)(currentLine.MandatoryEnd.Last().x + dx[n]);
+                    short nextY = (short)(currentLine.MandatoryEnd.Last().y + dy[n]);
                     Pos nextPos = new(nextX, nextY);
 
                     // Check if the next position is within the bounds of the game board
@@ -498,10 +540,23 @@
 
             return foundPath;
         }
-        static void DFS(Gameboard gameBoard, Pos currentPos, Pos targetPos, Line currentLine)
+        void DFS(Gameboard gameBoard, Pos currentPos, Pos targetPos, Line currentLine)
         {
             // Add current position to the current path
             currentLine.CurrentTrajectory.Add(currentPos);
+            currentLine.CurrentFill.grid[currentPos.x, currentPos.y] = 0x01;
+
+
+
+
+            // Use Invoke to marshal the call to the UI thread
+            // pictureBox.Invoke(new Action(() => {
+            //     Bitmap gameBoardBitmap = Logger.DrawSolution(gameBoard);
+            //     pictureBox.Image = gameBoardBitmap;
+            //     Console.Write(".");
+            // }));
+            //
+
 
             // If current position is the target position, add the current path to allPaths
             if (!PosObstructs(gameBoard, currentPos, currentLine, out bool hasNext, out Pos mandatoryNext))
@@ -512,10 +567,6 @@
                 }
                 else if (!PosNextToItself(gameBoard, currentPos, currentLine, targetPos) && !CheckForCutting(gameBoard, currentPos, currentLine))
                 {
-                    // Move in all possible directions (up, right, down, left)
-                    short[] dx = { 0, 1, 0, -1 };
-                    short[] dy = { -1, 0, 1, 0 };
-
                     for (int i = 0; i < 4; i++)
                     {
                         short nextX = (short)(currentPos.x + dx[i]); //TODO try remove cast
@@ -528,7 +579,7 @@
                         Pos nextPos = new(nextX, nextY);
                         if (!nextPos.Equals(targetPos))
                         {
-                            if (currentLine.CurrentTrajectory.Contains(nextPos))
+                            if (currentLine.CurrentFill.grid[nextPos.x, nextPos.y] != 0)
                                 continue;
                             if (PosOnColorDot(gameBoard, nextPos, null, true))
                                 continue;
@@ -545,7 +596,8 @@
             }
 
             // Remove current position from the current path to backtrack
-            currentLine.CurrentTrajectory.Remove(currentPos);
+            currentLine.CurrentTrajectory.RemoveAt(currentLine.CurrentTrajectory.Count - 1);
+            currentLine.CurrentFill.grid[currentPos.x, currentPos.y] = 0x00;
         }
         static Dictionary<int, int[]> CheckLines(Gameboard gameBoard, Line line1, Line line2)
         {
@@ -594,7 +646,7 @@
                 {
                     if (currentLine == line)
                         continue;
-                    if (line.CurrentTrajectory.Contains(pos))
+                    if (line.CurrentFill.grid[pos.x, pos.y] != 0)
                         return true;
                 }
             }
@@ -602,9 +654,6 @@
         }
         static bool PosObstructs(Gameboard gameBoard, Pos pos, Line currentLine, out bool hasMandatoryNextPos, out Pos mandatoryNextPos)
         {
-            int[] dx = { 0, 1, 0, -1 };
-            int[] dy = { -1, 0, 1, 0 };
-
             hasMandatoryNextPos = false;
             mandatoryNextPos = new Pos();
             HashSet<Pos> SingleHoles = new();
@@ -670,17 +719,17 @@
         static bool CheckForCutting(Gameboard gameboard, Pos pos, Line currentLine)
         {
             // Start DFS from each valid start position
-            Fill currentFill = new Fill(currentLine, gameboard.size);
             foreach (var line in gameboard.Lines)
             {
                 if (line == currentLine) continue;
 
-                if (line.CurrentTrajectory.Count == 0 || line.CurrentTrajectory.Contains(pos))
+                if (line.CurrentTrajectory.Count == 0 || line.CurrentFill.grid[pos.x, pos.y] != 0)
                 {
                     line.CurrentTrajectory = new();
+                    line.CurrentFill = new(gameboard.size);
                     Pos start = line.MandatoryStart.Count != 0 ? line.MandatoryStart.Last() : line.StartPos;
                     Pos end = line.MandatoryEnd.Count != 0 ? line.MandatoryEnd.Last() : line.EndPos;
-                    if (!DFS_Reach(gameboard, start, end, line, currentFill)) //If it cant reach
+                    if (!DFS_Reach(gameboard, start, end, line, currentLine.CurrentFill)) //If it cant reach
                         return true;
                     //line.CurrentTrajectory = new();
                 }
@@ -691,10 +740,8 @@
         {
             // Add current position to the current path
             currentLine.CurrentTrajectory.Add(currentPos);
+            currentLine.CurrentFill.grid[currentPos.x, currentPos.y] = 0x01;
 
-            // Move in all possible directions (up, right, down, left)
-            short[] dx = { 0, 1, 0, -1 };
-            short[] dy = { -1, 0, 1, 0 };
 
             for (int i = 0; i < 4; i++)
             {
@@ -708,11 +755,11 @@
                 Pos nextPos = new(nextX, nextY);
                 if (!nextPos.Equals(targetPos))
                 {
-                    if (currentLine.CurrentTrajectory.Contains(nextPos))
-                        continue;
-                    if (PosOnColorDot(gameBoard, nextPos, null, true))
+                    if (currentLine.CurrentFill.grid[nextPos.x, nextPos.y] != 0)
                         continue;
                     if (currentFill.grid[nextPos.x, nextPos.y] != 0)
+                        continue;
+                    if (PosOnColorDot(gameBoard, nextPos, null, true))
                         continue;
                     // Recursive call to explore the next position
                     if (DFS_Reach(gameBoard, nextPos, targetPos, currentLine, currentFill))
@@ -722,15 +769,13 @@
                     return true;
             }
             // Remove current position from the current path to backtrack
-            currentLine.CurrentTrajectory.Remove(currentPos);
+            currentLine.CurrentTrajectory.RemoveAt(currentLine.CurrentTrajectory.Count - 1);
+            currentLine.CurrentFill.grid[currentPos.x, currentPos.y] = 0x00;
 
             return false;
         }
         static bool PosNextToItself(Gameboard gameBoard, Pos pos, Line currentLine, Pos targetPos)
         {
-            int[] dx = { 0, 1, 0, -1 };
-            int[] dy = { -1, 0, 1, 0 };
-
             bool isNextTo = false;
 
             if (currentLine.CurrentTrajectory.Count < 3)

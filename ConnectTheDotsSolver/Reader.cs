@@ -40,11 +40,11 @@ namespace ConnectTheDotsSolver
                         Color pixelColor = bitmap.GetPixel(x, y);
 
                         // Output the color of the pixel
-                        Console.WriteLine($"The color of the pixel at ({x}, {y}) is: {pixelColor}");
+                        //Console.WriteLine($"The color of the pixel at ({x}, {y}) is: {pixelColor}");
 
                         if (pixelColor.GetBrightness() > 0.1f)
                         {
-                            Console.WriteLine($"Color is light");
+                            //Console.WriteLine($"Color is light");
                             if (colors.TryGetValue(pixelColor, out var outValue))
                             {
                                 if (colors[pixelColor].Item2.Equals(new Pos(-1, -1)))
@@ -55,8 +55,8 @@ namespace ConnectTheDotsSolver
                             else
                                 colors.Add(pixelColor, (new Pos(idx, idy), new Pos(-1, -1)));
                         }
-                        else
-                            Console.WriteLine($"Color is dark");
+                        //else
+                            //Console.WriteLine($"Color is dark");
                     }
                 }
                 foreach (var keyValuePair in colors)

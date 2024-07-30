@@ -27,16 +27,16 @@ namespace ConnectTheDotsSolver
         private void SolveButton_Click(object sender, EventArgs e)
         {
             Gameboard board;
-            Vector2 topRight = new(1080, 166);
+            Vector2 topLeft = new(1080, 166);
             Vector2 boardSize = new(715, 715);
-            int sides = 9;
+            int sides = 10;
 
-            reader.topLeftCorner = topRight;
-            reader.bottomRightCorner = topRight + boardSize;
+            reader.topLeftCorner = topLeft;
+            reader.bottomRightCorner = topLeft + boardSize;
             reader.sizeX = sides;
             reader.sizeY = sides;
-            player.topLeftCorner = topRight;
-            player.bottomRightCorner = topRight + boardSize;
+            player.topLeftCorner = topLeft;
+            player.bottomRightCorner = topLeft + boardSize;
             player.sizeX = sides;
             player.sizeY = sides;
             board = reader.ScanGameboard();
@@ -45,10 +45,14 @@ namespace ConnectTheDotsSolver
             pictureBox.Image = gameBoardBitmap;
             gameBoardBitmap.Save("board.png");
 
-            bool solved = solver.SolveGameBoard(board);
+            Thread thread = new Thread(new ThreadStart(() => {
+                bool solved = solver.SolveGameBoard(board);
 
-            if (solved)
-                player.Play(board);
+                if (solved)
+                    player.Play(board);
+            }));
+            thread.Name = "Solver";
+            thread.Start();
         }
     }
 }
